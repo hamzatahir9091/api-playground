@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import dns from "dns/promises"
 
 export async function POST(req: NextRequest) {
 	// noting the start time
@@ -53,21 +54,77 @@ export async function POST(req: NextRequest) {
 		})
 	}
 
-	const hostname = new URL(url).hostname
-	if (
-		/^127\.0\.0\.1/.test(hostname) ||
-		/^localhost/.test(hostname) ||
-		/^10\./.test(hostname) ||
-		/^192\.168\./.test(hostname) ||
-		/^172\.(1[6-9]|2[0-9]|3[0-1])/.test(hostname)
-	) {
+	const baseUrl = body.url;
+	let finalUrl: string;
+
+	try {
+		const urlObj = new URL(baseUrl);
+
+		// If query object exists, append it
+		if (body.query && typeof body.query === "object") {
+			for (const [key, value] of Object.entries(body.query)) {
+				urlObj.searchParams.set(key, String(value));
+			}
+		}
+
+		finalUrl = urlObj.toString();
+	} catch (err) {
 		return NextResponse.json({
 			success: false,
 			status: 400,
 			time: Date.now() - start,
-			error: "Requests to private IPs are blocked",
+			error: "Invalid URL",
+		});
+	}
+
+	const hostname = new URL(url).hostname
+
+
+	async function isPrivateIp(hostname: string) {
+		// Resolve hostname to all IPs
+		let addresses
+		try {
+			addresses = await dns.lookup(hostname, { all: true })
+		} catch {
+			return true // If DNS fails, treat as unsafe
+		}
+
+		for (const addr of addresses) {
+			const ip = addr.address
+
+			// IPv4 Private Ranges
+			if (
+				/^127\./.test(ip) || // localhost
+				/^10\./.test(ip) || // 10.x.x.x
+				/^192\.168\./.test(ip) || // 192.168.x.x
+				/^172\.(1[6-9]|2[0-9]|3[0-1])/.test(ip) || // 172.16-31.x.x
+				/^169\.254\./.test(ip) // link-local
+			) {
+				return true
+			}
+
+			// IPv6 Private / localhost
+			if (
+				ip === "::1" || // IPv6 localhost
+				/^fc00:/i.test(ip) || // Unique local IPv6
+				/^fe80:/i.test(ip) // Link-local IPv6
+			) {
+				return true
+			}
+		}
+
+		return false
+	}
+
+	if (!hostname.endsWith("jsonplaceholder.typicode.com") && await isPrivateIp(hostname)) {
+		return NextResponse.json({
+			success: false,
+			status: 400,
+			time: Date.now() - start,
+			error: "Requests to private IPs (IPv4 or IPv6) are blocked",
 		})
 	}
+
 
 	// checking for valid method entered by user
 	if (!METHODS.includes(method)) {
@@ -134,8 +191,7 @@ export async function POST(req: NextRequest) {
 		}
 	}
 
-	// request forwarding
-
+	// request forwarding 
 	try {
 		const controller = new AbortController()
 		const timeout = setTimeout(() => {
@@ -149,25 +205,66 @@ export async function POST(req: NextRequest) {
 			signal: controller.signal,
 		}
 
-		const response = await fetch(url, fetchOptions)
+		const response = await fetch(finalUrl, fetchOptions)
 		clearTimeout(timeout)
 
-		const text = await response.text()
-		let data
 
-		try {
-			data = JSON.parse(text) // Try parsing JSON
-		} catch {
-			data = text // Fallback to raw text
+		// this piece of code down here was buffering response all atonce 
+
+		// const text = await response.text()
+		// let data
+
+		// try {
+		// 	data = JSON.parse(text) // Try parsing JSON
+		// } catch {
+		// 	data = text // Fallback to raw text
+		// }
+
+
+		// return NextResponse.json({
+		// 	success: true,
+		// 	status: response.status,
+		// 	time: Date.now() - start,
+		// 	headers: Object.fromEntries(response.headers.entries()),
+		// 	data,
+		// })
+
+
+
+		// get the content  type to see if its text or binary image or file
+
+		// Get content-type
+		const contentType = response.headers.get("content-type") || ""
+
+		// If JSON, parse and return JSON safely
+		if (contentType.includes("application/json")) {
+			try {
+				const text = await response.text()
+				const data = JSON.parse(text)
+				return NextResponse.json({
+					success: true,
+					status: response.status,
+					time: Date.now() - start,
+					headers: Object.fromEntries(response.headers.entries()),
+					data,
+				})
+			} catch {
+				// fallback if invalid JSON
+				return new NextResponse(response.body, {
+					status: response.status,
+					headers: response.headers,
+				})
+			}
 		}
 
-		return NextResponse.json({
-			success: true,
+		// For everything else (text, files, images, PDFs, videos, SSE) → stream raw body
+		return new NextResponse(response.body, {
 			status: response.status,
-			time: Date.now() - start,
-			headers: Object.fromEntries(response.headers.entries()),
-			data,
+			headers: response.headers, // preserves content-type, content-disposition, etc.
 		})
+
+
+
 	} catch (err: any) {
 		return NextResponse.json({
 			success: false,
@@ -177,3 +274,4 @@ export async function POST(req: NextRequest) {
 		})
 	}
 }
+
