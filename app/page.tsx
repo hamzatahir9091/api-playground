@@ -13,6 +13,8 @@ import {
   Trash2,
   AlertCircle,
 } from "lucide-react";
+import DotFabric from "./components/DotFabric";
+
 
 interface Pair {
   key: string;
@@ -170,20 +172,22 @@ export default function ProxyClient() {
 
   return (
     <div className="min-h-screen  text-slate-200 font-sans p-4 md:p-8 selection:bg-blue-500/30">
+
+      <DotFabric />
       <div className="max-w-6xl mx-auto space-y-6">
         <header className="flex items-center gap-3 border-b border-slate-800 pb-6">
           <div className="bg-blue-600 p-2 rounded-lg shadow-lg shadow-blue-900/20">
             <Zap className="text-white" fill="currentColor" size={24} />
           </div>
           <div>
-            <h1 className="text-xl font-bold tracking-tight">NextProxy</h1>
+            <h1 className="text-xl font-bold tracking-tight">ProxyLab</h1>
             <p className="text-xs text-slate-500 font-medium">
               API TESTER & PROXY
             </p>
           </div>
         </header>
 
-        <section className="bg-[#151921] rounded-xl border border-slate-800 shadow-2xl overflow-hidden">
+        <section className="bg-[#151921] rounded-xl border border-slate-800 shadow-2xl overflow-hidden transition-* duration-300 hover:ring-blue-500/50 hover:ring-2 hover:shadow-[0_0_20px_#3b82f680]">
           <div className="p-3 flex flex-col md:flex-row gap-2 bg-[#1c212c]">
             <select
               value={method}
@@ -226,11 +230,10 @@ export default function ProxyClient() {
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`pb-3 text-xs font-bold uppercase tracking-widest transition-all relative ${
-                    activeTab === tab
-                      ? "text-blue-400"
-                      : "text-slate-500 hover:text-slate-300"
-                  }`}
+                  className={`pb-3 text-xs font-bold uppercase tracking-widest transition-all relative ${activeTab === tab
+                    ? "text-blue-400"
+                    : "text-slate-500 hover:text-slate-300"
+                    }`}
                 >
                   {tab}
                   {activeTab === tab && (
@@ -269,7 +272,7 @@ export default function ProxyClient() {
           </div>
         </section>
 
-        <section className="space-y-4 pb-12">
+        <section className="space-y-4 pb-12 ">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
               <Database size={16} /> Response
@@ -290,7 +293,7 @@ export default function ProxyClient() {
             )}
           </div>
 
-          <div className="bg-[#151921] rounded-xl border border-slate-800 min-h-[300px] overflow-hidden flex flex-col shadow-inner">
+          <div className="bg-[#151921] rounded-xl border border-slate-800 min-h-[300px] overflow-hidden flex flex-col  transition-* duration-300 hover:ring-blue-500/50 hover:ring-2 hover:shadow-[0_0_20px_#3b82f680]">
             {!response && !isLoading && (
               <div className="flex flex-col items-center justify-center flex-1 text-slate-600 italic">
                 <Code size={40} strokeWidth={1} className="mb-2 opacity-20" />
@@ -334,6 +337,7 @@ export default function ProxyClient() {
           </div>
         </section>
       </div>
+
     </div>
   );
 }
