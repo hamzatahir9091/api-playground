@@ -6,7 +6,7 @@ A small playground built to explore, test, and better understand how APIs and ba
 
 ## 🚀 Live Demo
 
-**[Open API Playground](https://proxy-lab-wheat.vercel.app/)**
+**[Open API Playground](https://proxy-lab-neo.vercel.app/)**
 
 ---
 
